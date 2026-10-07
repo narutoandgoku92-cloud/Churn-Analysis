@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -23,6 +25,10 @@ from sklearn.metrics import (
 )
 
 
+# Create the folder for saved charts
+os.makedirs("visualizations", exist_ok=True)
+
+
 # Load the dataset
 df = pd.read_csv("archive (2)/telco.csv")
 
@@ -34,6 +40,7 @@ print(df.shape)
 
 # See all the columns
 print("\nALL COLUMNS")
+
 for i, column in enumerate(df.columns, start=1):
     print(f"{i}. {column}")
 
@@ -78,9 +85,9 @@ sns.set_theme(
 plt.rcParams["figure.dpi"] = 120
 
 
-# --------------------------------------------------
+# ==================================================
 # EXPLORATORY DATA ANALYSIS
-# --------------------------------------------------
+# ==================================================
 
 # Customer churn distribution
 plt.figure(figsize=(8, 5))
@@ -112,6 +119,13 @@ for container in ax.containers:
     )
 
 plt.tight_layout()
+
+plt.savefig(
+    "visualizations/churn_distribution.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
 plt.show()
 
 
@@ -170,7 +184,15 @@ for container in ax.containers:
     )
 
 plt.ylim(0, 105)
+
 plt.tight_layout()
+
+plt.savefig(
+    "visualizations/churn_by_contract.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
 plt.show()
 
 
@@ -233,9 +255,19 @@ for container in ax.containers:
         padding=3
     )
 
-plt.ylim(0, max(tenure_churn["Yes"]) + 10)
+plt.ylim(
+    0,
+    max(tenure_churn["Yes"]) + 10
+)
 
 plt.tight_layout()
+
+plt.savefig(
+    "visualizations/churn_by_tenure.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
 plt.show()
 
 
@@ -263,12 +295,19 @@ plt.xlabel("Churn Status")
 plt.ylabel("Monthly Charge")
 
 plt.tight_layout()
+
+plt.savefig(
+    "visualizations/monthly_charges_by_churn.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
 plt.show()
 
 
-# --------------------------------------------------
+# ==================================================
 # MACHINE LEARNING
-# --------------------------------------------------
+# ==================================================
 
 print("\n" + "=" * 60)
 print("MACHINE LEARNING")
@@ -370,7 +409,7 @@ preprocessor = ColumnTransformer(
 )
 
 
-# Split the data into training and testing sets
+# Split the data
 X_train, X_test, y_train, y_test = train_test_split(
     X,
     y,
@@ -430,23 +469,27 @@ for model_name, model in models.items():
         ]
     )
 
+
     # Train the model
     pipeline.fit(
         X_train,
         y_train
     )
 
+
     # Make predictions
     y_pred = pipeline.predict(
         X_test
     )
 
-    # Get prediction probabilities
+
+    # Get probabilities for ROC-AUC
     y_probability = pipeline.predict_proba(
         X_test
     )[:, 1]
 
-    # Calculate evaluation metrics
+
+    # Calculate metrics
     accuracy = accuracy_score(
         y_test,
         y_pred
@@ -475,11 +518,13 @@ for model_name, model in models.items():
         y_probability
     )
 
+
     print(f"Accuracy:  {accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
     print(f"Recall:    {recall:.4f}")
     print(f"F1 Score:  {f1:.4f}")
     print(f"ROC-AUC:   {roc_auc:.4f}")
+
 
     print("\nClassification Report")
 
@@ -495,6 +540,7 @@ for model_name, model in models.items():
         )
     )
 
+
     results.append({
         "Model": model_name,
         "Accuracy": accuracy,
@@ -504,12 +550,13 @@ for model_name, model in models.items():
         "ROC-AUC": roc_auc
     })
 
+
     trained_models[model_name] = pipeline
 
 
-# --------------------------------------------------
+# ==================================================
 # MODEL COMPARISON
-# --------------------------------------------------
+# ==================================================
 
 results_df = pd.DataFrame(results)
 
@@ -531,7 +578,7 @@ print(
 )
 
 
-# Compare model performance visually
+# Compare model performance
 metrics_to_plot = [
     "Accuracy",
     "Precision",
@@ -543,6 +590,7 @@ metrics_to_plot = [
 comparison_data = results_df.set_index(
     "Model"
 )[metrics_to_plot]
+
 
 ax = comparison_data.plot(
     kind="bar",
@@ -577,10 +625,17 @@ plt.legend(
 )
 
 plt.tight_layout()
+
+plt.savefig(
+    "visualizations/model_comparison.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
 plt.show()
 
 
-# Find the best model based on ROC-AUC
+# Find the best model
 best_model_name = results_df.iloc[0]["Model"]
 
 best_model = trained_models[
@@ -593,67 +648,92 @@ best_result = results_df.iloc[0]
 print("\nBEST MODEL")
 print(best_model_name)
 
-print(f"Accuracy:  {best_result['Accuracy']:.4f}")
-print(f"Precision: {best_result['Precision']:.4f}")
-print(f"Recall:    {best_result['Recall']:.4f}")
-print(f"F1 Score:  {best_result['F1 Score']:.4f}")
-print(f"ROC-AUC:   {best_result['ROC-AUC']:.4f}")
+print(
+    f"Accuracy:  {best_result['Accuracy']:.4f}"
+)
+
+print(
+    f"Precision: {best_result['Precision']:.4f}"
+)
+
+print(
+    f"Recall:    {best_result['Recall']:.4f}"
+)
+
+print(
+    f"F1 Score:  {best_result['F1 Score']:.4f}"
+)
+
+print(
+    f"ROC-AUC:   {best_result['ROC-AUC']:.4f}"
+)
 
 
-# --------------------------------------------------
+# ==================================================
 # CONFUSION MATRIX
-# --------------------------------------------------
+# ==================================================
 
-for model_name, pipeline in trained_models.items():
+# Use the winning Logistic Regression model
+logistic_pipeline = trained_models[
+    "Logistic Regression"
+]
 
-    y_pred = pipeline.predict(
-        X_test
-    )
+y_pred = logistic_pipeline.predict(
+    X_test
+)
 
-    cm = confusion_matrix(
-        y_test,
-        y_pred
-    )
-
-    plt.figure(figsize=(6, 5))
-
-    sns.heatmap(
-        cm,
-        annot=True,
-        fmt="d",
-        cmap="Blues",
-        xticklabels=[
-            "Stayed",
-            "Churned"
-        ],
-        yticklabels=[
-            "Stayed",
-            "Churned"
-        ],
-        cbar=False,
-        annot_kws={
-            "fontsize": 14,
-            "fontweight": "bold"
-        }
-    )
-
-    plt.title(
-        f"{model_name}\nConfusion Matrix",
-        fontsize=15,
-        fontweight="bold",
-        pad=15
-    )
-
-    plt.xlabel("Predicted")
-    plt.ylabel("Actual")
-
-    plt.tight_layout()
-    plt.show()
+cm = confusion_matrix(
+    y_test,
+    y_pred
+)
 
 
-# --------------------------------------------------
+plt.figure(figsize=(6, 5))
+
+sns.heatmap(
+    cm,
+    annot=True,
+    fmt="d",
+    cmap="Blues",
+    xticklabels=[
+        "Stayed",
+        "Churned"
+    ],
+    yticklabels=[
+        "Stayed",
+        "Churned"
+    ],
+    cbar=False,
+    annot_kws={
+        "fontsize": 14,
+        "fontweight": "bold"
+    }
+)
+
+plt.title(
+    "Logistic Regression\nConfusion Matrix",
+    fontsize=15,
+    fontweight="bold",
+    pad=15
+)
+
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+
+plt.tight_layout()
+
+plt.savefig(
+    "visualizations/confusion_matrix_logistic_regression.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
+plt.show()
+
+
+# ==================================================
 # RANDOM FOREST FEATURE IMPORTANCE
-# --------------------------------------------------
+# ==================================================
 
 rf_pipeline = trained_models[
     "Random Forest"
@@ -664,7 +744,7 @@ rf_model = rf_pipeline.named_steps[
 ]
 
 
-# Get the names of the processed features
+# Get the processed feature names
 feature_names = (
     rf_pipeline
     .named_steps["preprocessor"]
@@ -695,7 +775,7 @@ print(
 )
 
 
-# Display the top 10 features
+# Show the top 10 features
 top_features = (
     feature_importance
     .head(10)
@@ -735,42 +815,80 @@ for container in ax.containers:
 
 
 plt.tight_layout()
+
+plt.savefig(
+    "visualizations/feature_importance.png",
+    dpi=300,
+    bbox_inches="tight"
+)
+
 plt.show()
 
 
-# --------------------------------------------------
+# ==================================================
 # FINAL PROJECT SUMMARY
-# --------------------------------------------------
+# ==================================================
 
 print("\n" + "=" * 60)
 print("FINAL PROJECT SUMMARY")
 print("=" * 60)
 
-print(f"Dataset size: {df.shape[0]:,} customers")
-print(f"Number of features used: {X.shape[1]}")
-print(f"Best model: {best_model_name}")
 print(
-    f"Accuracy: {best_result['Accuracy'] * 100:.2f}%"
-)
-print(
-    f"Precision: {best_result['Precision'] * 100:.2f}%"
-)
-print(
-    f"Recall: {best_result['Recall'] * 100:.2f}%"
-)
-print(
-    f"F1 Score: {best_result['F1 Score'] * 100:.2f}%"
-)
-print(
-    f"ROC-AUC: {best_result['ROC-AUC'] * 100:.2f}%"
+    f"Dataset size: {df.shape[0]:,} customers"
 )
 
-print("\nTop factors associated with churn predictions:")
+print(
+    f"Number of features used: {X.shape[1]}"
+)
+
+print(
+    f"Best model: {best_model_name}"
+)
+
+print(
+    f"Accuracy: "
+    f"{best_result['Accuracy'] * 100:.2f}%"
+)
+
+print(
+    f"Precision: "
+    f"{best_result['Precision'] * 100:.2f}%"
+)
+
+print(
+    f"Recall: "
+    f"{best_result['Recall'] * 100:.2f}%"
+)
+
+print(
+    f"F1 Score: "
+    f"{best_result['F1 Score'] * 100:.2f}%"
+)
+
+print(
+    f"ROC-AUC: "
+    f"{best_result['ROC-AUC'] * 100:.2f}%"
+)
+
+
+print(
+    "\nTop factors associated with "
+    "churn predictions:"
+)
 
 for _, row in feature_importance.head(5).iterrows():
+
     print(
         f"- {row['Feature']}: "
         f"{row['Importance']:.4f}"
     )
 
-print("\nProject completed successfully.")
+
+print(
+    "\nCharts saved to the "
+    "'visualizations' folder."
+)
+
+print(
+    "\nProject completed successfully."
+)
